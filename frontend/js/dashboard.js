@@ -1,180 +1,137 @@
-// URL da API
-const API_URL = window.location.origin;
+document.addEventListener('DOMContentLoaded', function() {
+    const API_URL = window.location.origin;
+    let isEditing = false;
+    let currentContent = '';
 
-// Variáveis globais
-let isEditing = false;
-let currentContent = '';
+    // Função para carregar conteúdo
+    function loadContent() {
+        fetch(`${API_URL}/api/note`)
+            .then(response => response.json())
+            .then(data => {
+                if (!isEditing && data.content) {
+                    document.getElementById('noteContent').innerHTML = data.content;
+                    currentContent = data.content;
+                }
+            })
+            .catch(console.error);
+    }
 
-// Função para verificar se um elemento existe
-function elementExists(id) {
-    return document.getElementById(id) !== null;
-}
+    // Carregar conteúdo inicial
+    loadContent();
+    
+    // Atualizar a cada 5 segundos
+    setInterval(loadContent, 5000);
 
-// Carrega o conteúdo inicial e atualiza periodicamente
-function loadContent() {
-    if (!elementExists('noteContent')) return;
+    // Botão de editar
+    document.getElementById('editButton').onclick = function() {
+        const noteContent = document.getElementById('noteContent');
+        noteContent.contentEditable = true;
+        noteContent.focus();
+        this.style.display = 'none';
+        document.getElementById('saveButton').style.display = 'inline-block';
+        document.getElementById('cancelButton').style.display = 'inline-block';
+        document.getElementById('mediaUploadContainer').style.display = 'block';
+        isEditing = true;
+    };
 
-    fetch(`${API_URL}/api/note`)
+    // Botão de salvar
+    document.getElementById('saveButton').onclick = function() {
+        const content = document.getElementById('noteContent').innerHTML;
+        
+        fetch(`${API_URL}/api/note`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content, username: 'imold' })
+        })
         .then(response => response.json())
         .then(data => {
-            if (!isEditing) {
-                const noteContent = document.getElementById('noteContent');
-                noteContent.innerHTML = data.content;
-                currentContent = data.content;
+            if (data.success) {
+                isEditing = false;
+                currentContent = content;
+                document.getElementById('editButton').style.display = 'inline-block';
+                document.getElementById('saveButton').style.display = 'none';
+                document.getElementById('cancelButton').style.display = 'none';
+                document.getElementById('mediaUploadContainer').style.display = 'none';
+                document.getElementById('noteContent').contentEditable = false;
+            } else {
+                alert('Erro ao salvar');
             }
         })
-        .catch(error => console.error('Erro ao carregar conteúdo:', error));
-}
+        .catch(() => alert('Erro ao salvar'));
+    };
 
-// Inicialização segura
-document.addEventListener('DOMContentLoaded', function() {
-    // Carrega conteúdo inicial
-    loadContent();
+    // Botão de cancelar
+    document.getElementById('cancelButton').onclick = function() {
+        document.getElementById('noteContent').innerHTML = currentContent;
+        document.getElementById('noteContent').contentEditable = false;
+        document.getElementById('editButton').style.display = 'inline-block';
+        document.getElementById('saveButton').style.display = 'none';
+        this.style.display = 'none';
+        document.getElementById('mediaUploadContainer').style.display = 'none';
+        isEditing = false;
+    };
 
-    // Configura os event listeners
-    if (elementExists('verHistoricoBtn')) {
-        document.getElementById('verHistoricoBtn').addEventListener('click', function() {
-            if (elementExists('loginModal')) {
-                document.getElementById('loginModal').style.display = 'block';
-            }
-        });
-    }
+    // Botão de ver histórico
+    document.getElementById('verHistoricoBtn').onclick = function() {
+        document.getElementById('loginModal').style.display = 'block';
+    };
 
-    if (elementExists('loginForm')) {
-        document.getElementById('loginForm').addEventListener('submit', function(event) {
-            event.preventDefault();
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
+    // Login para histórico
+    document.getElementById('loginForm').onsubmit = function(e) {
+        e.preventDefault();
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
 
-            if (username === "imold" && password === "letonio123") {
-                document.getElementById('loginModal').style.display = 'none';
-                fetchAndShowHistory();
-            } else {
-                this.classList.add('error-shake');
-                setTimeout(() => {
-                    this.classList.remove('error-shake');
-                }, 500);
-            }
-        });
-    }
-
-    // Configura o upload de mídia
-    if (elementExists('mediaUpload')) {
-        document.getElementById('mediaUpload').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const img = document.createElement('img');
-                    img.src = e.target.result;
-                    img.style.maxWidth = '100%';
-                    if (elementExists('noteContent')) {
-                        document.getElementById('noteContent').appendChild(img);
-                    }
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-    }
-
-    // Configura os botões de fechar modal
-    document.querySelectorAll('.close').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const modal = this.closest('.modal');
-            if (modal) modal.style.display = 'none';
-        });
-    });
-
-    // Clique fora do modal
-    window.onclick = function(event) {
-        if (event.target.classList.contains('modal')) {
-            event.target.style.display = 'none';
+        if (username === "imold" && password === "letonio123") {
+            document.getElementById('loginModal').style.display = 'none';
+            
+            // Carregar histórico
+            fetch(`${API_URL}/api/history`)
+                .then(response => response.json())
+                .then(history => {
+                    const historyEntries = document.querySelector('.history-entries');
+                    historyEntries.innerHTML = '';
+                    
+                    history.reverse().forEach(entry => {
+                        const timestamp = new Date(entry.timestamp).toLocaleString('pt-BR');
+                        historyEntries.innerHTML += `
+                            <div class="history-entry">
+                                <div class="history-entry-info">
+                                    <div class="history-main-info">
+                                        <div class="history-timestamp">🕒 ${timestamp}</div>
+                                        <div class="history-user">👤 ${entry.username}</div>
+                                        <div class="history-ip">🌐 ${entry.ip}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    document.getElementById('historyContainer').style.display = 'block';
+                })
+                .catch(console.error);
         }
     };
 
-    // Atualização periódica
-    setInterval(loadContent, 5000);
-});
-
-// Função para alternar modo de edição
-function toggleEdit() {
-    if (!elementExists('noteContent')) return;
-
-    const noteContent = document.getElementById('noteContent');
-    const editButton = document.getElementById('editButton');
-    const saveButton = document.getElementById('saveButton');
-    const cancelButton = document.getElementById('cancelButton');
-    const mediaUploadContainer = document.getElementById('mediaUploadContainer');
-
-    if (!isEditing && noteContent && editButton && saveButton && cancelButton && mediaUploadContainer) {
-        noteContent.contentEditable = true;
-        noteContent.focus();
-        editButton.style.display = 'none';
-        saveButton.style.display = 'inline-block';
-        cancelButton.style.display = 'inline-block';
-        mediaUploadContainer.style.display = 'block';
-        isEditing = true;
-    }
-}
-
-// Função para salvar alterações
-function saveChanges() {
-    if (!elementExists('noteContent')) return;
-
-    const noteContent = document.getElementById('noteContent');
-    const content = noteContent.innerHTML;
-
-    fetch(`${API_URL}/api/note`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            content: content,
-            username: 'imold'
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            exitEditMode();
-            currentContent = content;
-            loadContent();
-        } else {
-            alert(data.error || 'Erro ao salvar alterações');
-        }
-    })
-    .catch(error => {
-        console.error('Erro:', error);
-        alert('Erro ao salvar alterações. Tente novamente.');
+    // Fechar modais
+    document.querySelectorAll('.close').forEach(btn => {
+        btn.onclick = function() {
+            this.closest('.modal').style.display = 'none';
+        };
     });
-}
 
-// Função para cancelar edição
-function cancelEdit() {
-    if (!elementExists('noteContent')) return;
-    
-    const noteContent = document.getElementById('noteContent');
-    noteContent.innerHTML = currentContent;
-    exitEditMode();
-}
-
-// Função para sair do modo de edição
-function exitEditMode() {
-    if (!elementExists('noteContent')) return;
-
-    const noteContent = document.getElementById('noteContent');
-    const editButton = document.getElementById('editButton');
-    const saveButton = document.getElementById('saveButton');
-    const cancelButton = document.getElementById('cancelButton');
-    const mediaUploadContainer = document.getElementById('mediaUploadContainer');
-
-    if (noteContent && editButton && saveButton && cancelButton && mediaUploadContainer) {
-        noteContent.contentEditable = false;
-        editButton.style.display = 'inline-block';
-        saveButton.style.display = 'none';
-        cancelButton.style.display = 'none';
-        mediaUploadContainer.style.display = 'none';
-        isEditing = false;
-    }
-}
+    // Upload de mídia
+    document.getElementById('mediaUpload').onchange = function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                img.style.maxWidth = '100%';
+                document.getElementById('noteContent').appendChild(img);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+});
