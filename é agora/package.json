@@ -1,0 +1,16 @@
+{
+  "name": "the-old",
+  "version": "1.0.0",
+  "description": "Sistema The Old",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.17.1",
+    "cors": "^2.8.5"
+  }
+}

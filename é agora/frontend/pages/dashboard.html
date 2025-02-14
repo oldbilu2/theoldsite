@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="../css/dashboard.css">
+</head>
+<body>
+    <script>
+        // Verificação de login
+        if (!sessionStorage.getItem('loggedIn')) {
+            window.location.href = '../index.html';
+        }
+    </script>
+
+    <div class="welcome">
+        <h1>PAINEL DE EVIDÊNCIAS</h1>
+        <p class="subtitle">Sistema de Arquivamento de Provas e Documentação</p>
+        <div class="welcome-text">
+            <p>Área restrita para armazenamento de evidências digitais</p>
+            <p class="warning">CONFIDENCIAL - ACESSO AUTORIZADO</p>
+        </div>
+    </div>
+
+    <div class="note-container">
+        <h2>Registro de Evidências</h2>
+        <p class="alert-message">ATENÇÃO: Todas as ações, edições e uploads realizados neste sistema são monitorados e registrados permanentemente.</p>
+        <div id="noteContent" class="note-content"></div>
+        <div class="media-upload" id="mediaUploadContainer" style="display: none;">
+            <input type="file" id="mediaUpload" accept="image/*" style="display: none;">
+            <button onclick="document.getElementById('mediaUpload').click()" class="upload-button">
+                Adicionar Imagem
+            </button>
+        </div>
+        <div class="button-container">
+            <button onclick="toggleEdit()" class="edit-button" id="editButton">Editar</button>
+            <button onclick="saveChanges()" class="edit-button" id="saveButton" style="display: none;">Salvar</button>
+            <button onclick="cancelEdit()" class="edit-button" id="cancelButton" style="display: none;">Cancelar</button>
+            <button id="verHistoricoBtn" class="edit-button">Ver Histórico</button>
+        </div>
+    </div>
+
+    <!-- Modal de Login para Histórico -->
+    <div id="loginModal" class="modal">
+        <div class="login-container">
+            <h2>ÁREA ULTRA RESTRITA</h2>
+            <div class="warning-box">
+                <h3>ACESSO SUPERIOR</h3>
+                <div class="warning-content">
+                    <span class="warning-icon">⚠</span>
+                    <span class="warning-text">ALERTA</span>
+                    <span class="warning-icon">⚠</span>
+                </div>
+                <p>Esta área é exclusiva para superiores</p>
+                <p>Acesso não autorizado será rastreado</p>
+                <p>Todas as tentativas são registradas</p>
+                <p>Sistema protegido e monitorado</p>
+            </div>
+            <form id="loginForm">
+                <input type="text" id="username" placeholder="Usuário" required>
+                <input type="password" id="password" placeholder="Senha" required>
+                <button type="submit">ACESSAR</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Histórico Compacto -->
+    <div id="historyContainer" class="modal">
+        <div class="history-content">
+            <div class="history-header">
+                <h2>Histórico de Alterações</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="warning-box">
+                <h3>Registro de Evidências</h3>
+                <p>Todas as alterações realizadas no sistema são registradas e armazenadas em nosso banco de dados.</p>
+                <p>Cada registro contém informações detalhadas sobre o usuário, data, hora e conteúdo modificado.</p>
+                <p>Este histórico serve como evidência para fins de auditoria e segurança.</p>
+            </div>
+            <div class="history-entries"></div>
+        </div>
+    </div>
+
+    <!-- Modal de Comparação -->
+    <div id="compareModal" class="modal">
+        <div class="compare-modal">
+            <div class="compare-header">
+                <h3>Detalhes da Alteração</h3>
+                <span class="close" onclick="closeCompare()">&times;</span>
+            </div>
+            <div class="compare-container">
+                <div class="compare-side">
+                    <h4>Versão Anterior</h4>
+                    <div id="beforeContent"></div>
+                </div>
+                <div class="compare-side">
+                    <h4>Nova Versão</h4>
+                    <div id="afterContent"></div>
+                </div>
+            </div>
+            <button onclick="closeCompare()" class="close-button">Fechar</button>
+        </div>
+    </div>
+
+    <div class="signature">by DED BILU</div>
+
+    <!-- Modal de Histórico -->
+    <div id="historyModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Histórico de Edições</h2>
+            <div id="historyContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3000/api';
+        let noteContent = document.getElementById('noteContent');
+        let mediaUpload = document.getElementById('mediaUpload');
+        let mediaUploadContainer = document.getElementById('mediaUploadContainer');
+        let imageCounter = 0;
+        let imageMap = new Map(); // Armazena todas as imagens
+
+        // Função melhorada para comprimir imagem
+        function compressImage(dataUrl, maxWidth = 400) { // Reduzido para 400px
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+
+                    // Calcula a nova dimensão mantendo a proporção
+                    if (width > maxWidth) {
+                        height = Math.round((height * maxWidth) / width);
+                        width = maxWidth;
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    
+                    // Aplica suavização
+                    ctx.imageSmoothingEnabled = true;
+                    ctx.imageSmoothingQuality = 'high';
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Comprime com qualidade muito reduzida
+                    resolve(canvas.toDataURL('image/jpeg', 0.3)); // Reduzido para 0.3
+                };
+                img.src = dataUrl;
+            });
+        }
+
+        // Carrega a nota inicial
+        fetch(`${API_URL}/note`)
+            .then(response => response.json())
+            .then(data => {
+                noteContent.innerHTML = data.content;
+            })
+            .catch(error => {
+                console.error('Erro ao carregar nota:', error);
+            });
+
+        mediaUpload.addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = async function(e) {
+                    try {
+                        const compressedImage = await compressImage(e.target.result);
+                        const textarea = document.getElementById('editArea');
+                        
+                        imageCounter++;
+                        const placeholderText = `[Imagem ${imageCounter}]`;
+                        
+                        // Adiciona ao Map
+                        imageMap.set(placeholderText, compressedImage);
+                        
+                        // Insere o placeholder no textarea
+                        const cursorPos = textarea.selectionStart;
+                        const textBefore = textarea.value.substring(0, cursorPos);
+                        const textAfter = textarea.value.substring(cursorPos);
+                        textarea.value = textBefore + placeholderText + textAfter;
+                        
+                    } catch (error) {
+                        console.error('Erro ao processar imagem:', error);
+                        alert('Erro ao processar imagem. Tente novamente.');
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+            this.value = '';
+        });
+
+        // Função para salvar
+        function saveChanges() {
+            const editArea = document.getElementById('editArea');
+            let content = editArea.value;
+            
+            // Substitui todos os placeholders pelas imagens
+            imageMap.forEach((imageData, placeholder) => {
+                content = content.replace(
+                    placeholder,
+                    `<img src="${imageData}" style="max-width: 100%; height: auto;">`
+                );
+            });
+            
+            fetch(`${API_URL}/note`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ 
+                    content: content,
+                    username: sessionStorage.getItem('username')
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    noteContent.innerHTML = content;
+                    editButton.style.display = 'inline-block';
+                    saveButton.style.display = 'none';
+                    cancelButton.style.display = 'none';
+                    mediaUploadContainer.style.display = 'none';
+                    // Limpa o mapa de imagens após salvar
+                    imageMap.clear();
+                    imageCounter = 0;
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao salvar:', error);
+                alert('Erro ao salvar as alterações');
+            });
+        }
+
+        // Função para editar
+        function toggleEdit() {
+            const currentContent = noteContent.innerHTML;
+            
+            // Limpa o mapa anterior
+            imageMap.clear();
+            imageCounter = 0;
+            
+            // Substitui as tags de imagem por placeholders
+            let editableContent = currentContent;
+            const imgRegex = /<img[^>]+src="([^">]+)"[^>]*>/g;
+            let match;
+            
+            while ((match = imgRegex.exec(currentContent)) !== null) {
+                imageCounter++;
+                const placeholder = `[Imagem ${imageCounter}]`;
+                editableContent = editableContent.replace(match[0], placeholder);
+                
+                // Adiciona ao mapa
+                imageMap.set(placeholder, match[1]);
+            }
+            
+            noteContent.innerHTML = `<textarea id="editArea" class="edit-area">${editableContent}</textarea>`;
+            
+            editButton.style.display = 'none';
+            saveButton.style.display = 'inline-block';
+            cancelButton.style.display = 'inline-block';
+            mediaUploadContainer.style.display = 'block';
+            
+            noteContent.setAttribute('data-original', currentContent);
+        }
+
+        // Função para cancelar
+        function cancelEdit() {
+            const originalContent = noteContent.getAttribute('data-original');
+            noteContent.innerHTML = originalContent;
+            
+            editButton.style.display = 'inline-block';
+            saveButton.style.display = 'none';
+            cancelButton.style.display = 'none';
+            mediaUploadContainer.style.display = 'none';
+            
+            // Limpa o mapa de imagens
+            imageMap.clear();
+            imageCounter = 0;
+        }
+
+        // Função única para mostrar o modal de login
+        document.getElementById('verHistoricoBtn').addEventListener('click', function() {
+            const loginModal = document.getElementById('loginModal');
+            // Limpa os campos antes de mostrar
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+            // Remove mensagens de erro anteriores
+            const errorMsg = loginModal.querySelector('.error-message');
+            if (errorMsg) errorMsg.remove();
+            // Mostra o modal
+            loginModal.style.display = "block";
+        });
+
+        // Função para verificar login e mostrar histórico
+        document.getElementById('loginForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            if (username === "imold" && password === "letonio123") {
+                document.getElementById('loginModal').style.display = "none";
+                fetchAndShowHistory();
+            } else {
+                const errorMsg = document.createElement('div');
+                errorMsg.className = 'error-message';
+                errorMsg.textContent = 'Credenciais inválidas';
+                // Remove mensagem de erro anterior se existir
+                const oldError = this.querySelector('.error-message');
+                if (oldError) oldError.remove();
+                this.appendChild(errorMsg);
+                setTimeout(() => errorMsg.remove(), 3000);
+            }
+        });
+
+        // Função para buscar e mostrar o histórico
+        function fetchAndShowHistory() {
+            fetch(`${API_URL}/history`)
+                .then(response => response.json())
+                .then(history => {
+                    const historyContainer = document.getElementById('historyContainer');
+                    const historyEntries = historyContainer.querySelector('.history-entries');
+                    historyEntries.innerHTML = '';
+                    
+                    history.reverse().forEach((entry, index) => {
+                        const timestamp = new Date(entry.timestamp).toLocaleString('pt-BR');
+                        
+                        const entryDiv = document.createElement('div');
+                        entryDiv.className = 'history-entry';
+                        entryDiv.innerHTML = `
+                            <div class="history-entry-info">
+                                <div class="history-main-info">
+                                    <div class="history-timestamp">
+                                        <span class="time-icon">🕒</span>
+                                        ${timestamp}
+                                    </div>
+                                    <div class="history-user">
+                                        <span class="user-icon">👤</span>
+                                        ${entry.username || 'Usuário Desconhecido'}
+                                    </div>
+                                    <div class="history-ip">
+                                        <span class="ip-icon">🌐</span>
+                                        ${entry.ip || 'IP não registrado'}
+                                    </div>
+                                </div>
+                                <button class="view-changes-btn" onclick="showChanges('${index}')">
+                                    Ver Alterações
+                                </button>
+                            </div>
+                        `;
+                        
+                        historyEntries.appendChild(entryDiv);
+                    });
+                    
+                    historyContainer.style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar histórico:', error);
+                    alert('Erro ao carregar o histórico');
+                });
+        }
+
+        // Função para mostrar as alterações
+        function showChanges(index) {
+            const compareModal = document.getElementById('compareModal');
+            const beforeContent = document.getElementById('beforeContent');
+            const afterContent = document.getElementById('afterContent');
+            
+            fetch(`${API_URL}/history`)
+                .then(response => response.json())
+                .then(history => {
+                    const entry = history[history.length - 1 - index];
+                    beforeContent.innerHTML = entry.oldContent || 'Conteúdo anterior não disponível';
+                    afterContent.innerHTML = entry.newContent || 'Conteúdo novo não disponível';
+                    compareModal.style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar alterações:', error);
+                    alert('Erro ao carregar as alterações');
+                });
+        }
+
+        // Fechar modais
+        document.querySelectorAll('.close').forEach(btn => {
+            btn.addEventListener('click', function() {
+                this.closest('.modal').style.display = 'none';
+            });
+        });
+
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = 'none';
+            }
+        };
+    </script>
+
+    <style>
+        /* Estilos do Container de Histórico */
+        .history-content {
+            width: 90%;
+            max-width: 1200px;
+            margin: 20px auto;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 15px;
+            padding: 20px;
+        }
+
+        .history-entries {
+            max-height: 80vh;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        /* Estilo das Entradas do Histórico */
+        .history-entry {
+            background: rgba(26, 26, 26, 0.9);
+            margin-bottom: 15px;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 51, 102, 0.2);
+        }
+
+        .history-entry-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .history-main-info {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+            flex: 1;
+        }
+
+        .history-timestamp, .history-user, .history-ip {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #fff;
+            font-size: 14px;
+        }
+
+        /* Botão Ver Alterações */
+        .view-changes-btn {
+            background: linear-gradient(45deg, #ff3366, #ff0044);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Share Tech Mono', monospace;
+            transition: all 0.3s ease;
+        }
+
+        .view-changes-btn:hover {
+            background: linear-gradient(45deg, #ff0044, #ff3366);
+            transform: translateY(-2px);
+        }
+
+        /* Modal de Comparação */
+        .compare-modal {
+            width: 90%;
+            max-width: 1200px;
+            margin: 30px auto;
+            background: rgba(0, 0, 0, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+        }
+
+        .compare-container {
+            display: flex;
+            gap: 30px;
+            margin-top: 20px;
+        }
+
+        .compare-side {
+            flex: 1;
+            background: rgba(26, 26, 26, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .compare-side h4 {
+            color: #ff3366;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        /* Scrollbar personalizada */
+        .history-entries::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .history-entries::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+        }
+
+        .history-entries::-webkit-scrollbar-thumb {
+            background: #ff3366;
+            border-radius: 4px;
+        }
+
+        /* Responsividade */
+        @media (max-width: 768px) {
+            .history-main-info {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+
+            .history-entry-info {
+                flex-direction: column;
+            }
+
+            .view-changes-btn {
+                width: 100%;
+                margin-top: 10px;
+            }
+
+            .compare-container {
+                flex-direction: column;
+            }
+        }
+    </style>
+</body>
+</html>
