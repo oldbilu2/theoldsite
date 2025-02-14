@@ -15,9 +15,17 @@ const DATA_PATH = path.join(__dirname, 'data');
 const NOTE_FILE = path.join(DATA_PATH, 'note.txt');
 const HISTORY_FILE = path.join(DATA_PATH, 'history.json');
 
-// Criar pasta de dados se não existir
+// Criar pasta e arquivos se não existirem
 if (!fs.existsSync(DATA_PATH)) {
-    fs.mkdirSync(DATA_PATH);
+    fs.mkdirSync(DATA_PATH, { recursive: true });
+}
+
+if (!fs.existsSync(NOTE_FILE)) {
+    fs.writeFileSync(NOTE_FILE, 'Sistema Exclusivo THE OLD');
+}
+
+if (!fs.existsSync(HISTORY_FILE)) {
+    fs.writeFileSync(HISTORY_FILE, '[]');
 }
 
 // Carregar dados salvos
@@ -41,7 +49,19 @@ app.get('/', (req, res) => {
 });
 
 app.get('/api/note', (req, res) => {
-    res.json({ content: savedNote });
+    try {
+        // Recarrega a nota do arquivo a cada requisição
+        if (fs.existsSync(NOTE_FILE)) {
+            savedNote = fs.readFileSync(NOTE_FILE, 'utf8');
+        }
+        res.json({ content: savedNote });
+    } catch (error) {
+        console.error('Erro ao ler nota:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Erro ao ler nota'
+        });
+    }
 });
 
 app.post('/api/note', async (req, res) => {
@@ -56,6 +76,11 @@ app.post('/api/note', async (req, res) => {
 
         const { content, username } = req.body;
         
+        // Recarrega o histórico antes de adicionar nova entrada
+        if (fs.existsSync(HISTORY_FILE)) {
+            editHistory = JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8'));
+        }
+
         // Salvar histórico
         editHistory.push({
             timestamp: new Date(),
@@ -70,7 +95,7 @@ app.post('/api/note', async (req, res) => {
 
         // Salvar em arquivo
         fs.writeFileSync(NOTE_FILE, savedNote);
-        fs.writeFileSync(HISTORY_FILE, JSON.stringify(editHistory));
+        fs.writeFileSync(HISTORY_FILE, JSON.stringify(editHistory, null, 2));
         
         res.json({ success: true });
     } catch (error) {
@@ -84,9 +109,31 @@ app.post('/api/note', async (req, res) => {
 });
 
 app.get('/api/history', (req, res) => {
-    res.json(editHistory);
+    try {
+        // Recarrega o histórico a cada requisição
+        if (fs.existsSync(HISTORY_FILE)) {
+            editHistory = JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8'));
+        }
+        res.json(editHistory);
+    } catch (error) {
+        console.error('Erro ao ler histórico:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Erro ao ler histórico'
+        });
+    }
+});
+
+// Tratamento de erros
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({ 
+        success: false, 
+        error: 'Erro interno do servidor'
+    });
 });
 
 app.listen(PORT, () => {
     console.log(`Servidor rodando na porta ${PORT}`);
+    console.log(`Pasta de dados: ${DATA_PATH}`);
 });
