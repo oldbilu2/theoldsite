@@ -1,31 +1,50 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const app = express();
 
 // Configurações
 const PORT = process.env.PORT || 8080;
 app.use(cors());
 app.use(express.json());
-
-// Servir arquivos estáticos
 app.use(express.static(path.join(__dirname, '../frontend')));
 
-// Variáveis para armazenar dados (em produção, use um banco de dados)
+// Caminhos para os arquivos de dados
+const DATA_PATH = path.join(__dirname, 'data');
+const NOTE_FILE = path.join(DATA_PATH, 'note.txt');
+const HISTORY_FILE = path.join(DATA_PATH, 'history.json');
+
+// Criar pasta de dados se não existir
+if (!fs.existsSync(DATA_PATH)) {
+    fs.mkdirSync(DATA_PATH);
+}
+
+// Carregar dados salvos
 let savedNote = '';
 let editHistory = [];
 
-// Rota principal
+try {
+    if (fs.existsSync(NOTE_FILE)) {
+        savedNote = fs.readFileSync(NOTE_FILE, 'utf8');
+    }
+    if (fs.existsSync(HISTORY_FILE)) {
+        editHistory = JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8'));
+    }
+} catch (error) {
+    console.error('Erro ao carregar dados:', error);
+}
+
+// Rotas
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/pages/dashboard.html'));
+    res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
 
-// Suas rotas API existentes
 app.get('/api/note', (req, res) => {
     res.json({ content: savedNote });
 });
 
-app.post('/api/note', (req, res) => {
+app.post('/api/note', async (req, res) => {
     try {
         let ip = req.headers['x-forwarded-for'] || 
                 req.connection.remoteAddress || 
@@ -37,6 +56,7 @@ app.post('/api/note', (req, res) => {
 
         const { content, username } = req.body;
         
+        // Salvar histórico
         editHistory.push({
             timestamp: new Date(),
             username: username,
@@ -45,11 +65,21 @@ app.post('/api/note', (req, res) => {
             ip: ip
         });
 
+        // Atualizar nota
         savedNote = content;
+
+        // Salvar em arquivo
+        fs.writeFileSync(NOTE_FILE, savedNote);
+        fs.writeFileSync(HISTORY_FILE, JSON.stringify(editHistory));
+        
         res.json({ success: true });
     } catch (error) {
         console.error('Erro:', error);
-        res.status(500).json({ success: false, error: 'Erro ao salvar nota' });
+        res.status(500).json({ 
+            success: false, 
+            error: 'Erro ao salvar nota',
+            details: error.message 
+        });
     }
 });
 
