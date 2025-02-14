@@ -5,12 +5,19 @@ const API_URL = window.location.origin;
 let isEditing = false;
 let currentContent = '';
 
+// Função para verificar se um elemento existe
+function elementExists(id) {
+    return document.getElementById(id) !== null;
+}
+
 // Carrega o conteúdo inicial e atualiza periodicamente
 function loadContent() {
+    if (!elementExists('noteContent')) return;
+
     fetch(`${API_URL}/api/note`)
         .then(response => response.json())
         .then(data => {
-            if (!isEditing) { // Só atualiza se não estiver editando
+            if (!isEditing) {
                 const noteContent = document.getElementById('noteContent');
                 noteContent.innerHTML = data.content;
                 currentContent = data.content;
@@ -19,21 +26,87 @@ function loadContent() {
         .catch(error => console.error('Erro ao carregar conteúdo:', error));
 }
 
-// Carrega conteúdo inicial
-window.onload = loadContent;
+// Inicialização segura
+document.addEventListener('DOMContentLoaded', function() {
+    // Carrega conteúdo inicial
+    loadContent();
 
-// Atualiza a cada 5 segundos
-setInterval(loadContent, 5000);
+    // Configura os event listeners
+    if (elementExists('verHistoricoBtn')) {
+        document.getElementById('verHistoricoBtn').addEventListener('click', function() {
+            if (elementExists('loginModal')) {
+                document.getElementById('loginModal').style.display = 'block';
+            }
+        });
+    }
+
+    if (elementExists('loginForm')) {
+        document.getElementById('loginForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            if (username === "imold" && password === "letonio123") {
+                document.getElementById('loginModal').style.display = 'none';
+                fetchAndShowHistory();
+            } else {
+                this.classList.add('error-shake');
+                setTimeout(() => {
+                    this.classList.remove('error-shake');
+                }, 500);
+            }
+        });
+    }
+
+    // Configura o upload de mídia
+    if (elementExists('mediaUpload')) {
+        document.getElementById('mediaUpload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.style.maxWidth = '100%';
+                    if (elementExists('noteContent')) {
+                        document.getElementById('noteContent').appendChild(img);
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    // Configura os botões de fechar modal
+    document.querySelectorAll('.close').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const modal = this.closest('.modal');
+            if (modal) modal.style.display = 'none';
+        });
+    });
+
+    // Clique fora do modal
+    window.onclick = function(event) {
+        if (event.target.classList.contains('modal')) {
+            event.target.style.display = 'none';
+        }
+    };
+
+    // Atualização periódica
+    setInterval(loadContent, 5000);
+});
 
 // Função para alternar modo de edição
 function toggleEdit() {
+    if (!elementExists('noteContent')) return;
+
     const noteContent = document.getElementById('noteContent');
     const editButton = document.getElementById('editButton');
     const saveButton = document.getElementById('saveButton');
     const cancelButton = document.getElementById('cancelButton');
     const mediaUploadContainer = document.getElementById('mediaUploadContainer');
 
-    if (!isEditing) {
+    if (!isEditing && noteContent && editButton && saveButton && cancelButton && mediaUploadContainer) {
         noteContent.contentEditable = true;
         noteContent.focus();
         editButton.style.display = 'none';
@@ -46,6 +119,8 @@ function toggleEdit() {
 
 // Função para salvar alterações
 function saveChanges() {
+    if (!elementExists('noteContent')) return;
+
     const noteContent = document.getElementById('noteContent');
     const content = noteContent.innerHTML;
 
@@ -64,19 +139,21 @@ function saveChanges() {
         if (data.success) {
             exitEditMode();
             currentContent = content;
-            loadContent(); // Recarrega o conteúdo após salvar
+            loadContent();
         } else {
-            alert('Erro ao salvar alterações');
+            alert(data.error || 'Erro ao salvar alterações');
         }
     })
     .catch(error => {
         console.error('Erro:', error);
-        alert('Erro ao salvar alterações');
+        alert('Erro ao salvar alterações. Tente novamente.');
     });
 }
 
 // Função para cancelar edição
 function cancelEdit() {
+    if (!elementExists('noteContent')) return;
+    
     const noteContent = document.getElementById('noteContent');
     noteContent.innerHTML = currentContent;
     exitEditMode();
@@ -84,111 +161,20 @@ function cancelEdit() {
 
 // Função para sair do modo de edição
 function exitEditMode() {
+    if (!elementExists('noteContent')) return;
+
     const noteContent = document.getElementById('noteContent');
     const editButton = document.getElementById('editButton');
     const saveButton = document.getElementById('saveButton');
     const cancelButton = document.getElementById('cancelButton');
     const mediaUploadContainer = document.getElementById('mediaUploadContainer');
 
-    noteContent.contentEditable = false;
-    editButton.style.display = 'inline-block';
-    saveButton.style.display = 'none';
-    cancelButton.style.display = 'none';
-    mediaUploadContainer.style.display = 'none';
-    isEditing = false;
+    if (noteContent && editButton && saveButton && cancelButton && mediaUploadContainer) {
+        noteContent.contentEditable = false;
+        editButton.style.display = 'inline-block';
+        saveButton.style.display = 'none';
+        cancelButton.style.display = 'none';
+        mediaUploadContainer.style.display = 'none';
+        isEditing = false;
+    }
 }
-
-// Função para buscar e mostrar o histórico
-function fetchAndShowHistory() {
-    fetch(`${API_URL}/api/history`)
-        .then(response => response.json())
-        .then(history => {
-            const historyEntries = document.querySelector('.history-entries');
-            historyEntries.innerHTML = '';
-            
-            history.reverse().forEach((entry, index) => {
-                const timestamp = new Date(entry.timestamp).toLocaleString('pt-BR');
-                
-                const entryDiv = document.createElement('div');
-                entryDiv.className = 'history-entry';
-                entryDiv.innerHTML = `
-                    <div class="history-entry-info">
-                        <div class="history-main-info">
-                            <div class="history-timestamp">
-                                <span class="time-icon">🕒</span>
-                                ${timestamp}
-                            </div>
-                            <div class="history-user">
-                                <span class="user-icon">👤</span>
-                                ${entry.username || 'Usuário Desconhecido'}
-                            </div>
-                            <div class="history-ip">
-                                <span class="ip-icon">🌐</span>
-                                ${entry.ip || 'IP não registrado'}
-                            </div>
-                        </div>
-                        <button class="view-changes-btn" onclick="showChanges(${index})">
-                            Ver Alterações
-                        </button>
-                    </div>
-                `;
-                
-                historyEntries.appendChild(entryDiv);
-            });
-            
-            document.getElementById('historyContainer').style.display = 'block';
-        })
-        .catch(error => {
-            console.error('Erro ao carregar histórico:', error);
-            alert('Erro ao carregar o histórico');
-        });
-}
-
-// Event Listeners
-document.getElementById('verHistoricoBtn').addEventListener('click', function() {
-    document.getElementById('loginModal').style.display = 'block';
-});
-
-document.getElementById('loginForm').addEventListener('submit', function(event) {
-    event.preventDefault();
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
-
-    if (username === "imold" && password === "letonio123") {
-        document.getElementById('loginModal').style.display = 'none';
-        fetchAndShowHistory();
-    } else {
-        this.classList.add('error-shake');
-        setTimeout(() => {
-            this.classList.remove('error-shake');
-        }, 500);
-    }
-});
-
-// Fechar modais
-document.querySelectorAll('.close').forEach(btn => {
-    btn.addEventListener('click', function() {
-        this.closest('.modal').style.display = 'none';
-    });
-});
-
-window.onclick = function(event) {
-    if (event.target.classList.contains('modal')) {
-        event.target.style.display = 'none';
-    }
-};
-
-// Upload de mídia
-document.getElementById('mediaUpload').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const img = document.createElement('img');
-            img.src = e.target.result;
-            img.style.maxWidth = '100%';
-            document.getElementById('noteContent').appendChild(img);
-        };
-        reader.readAsDataURL(file);
-    }
-});
