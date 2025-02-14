@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Acesso Restrito</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="header-title"></div>
+    <div class="modal-overlay" id="modalOverlay"></div>
+    
+    <div class="login-container">
+        <h2>ACESSO RESTRITO</h2>
+        <div class="warning-text">
+            <p>SISTEMA EXCLUSIVO THE OLD</p>
+            <p class="alert">⚠️ ATENÇÃO ⚠️</p>
+            <p>Todas as ações são registradas</p>
+            <p>Uploads e edições são monitorados</p>
+        </div>
+        <div class="input-group">
+            <input type="text" id="username" placeholder="Usuário">
+        </div>
+        <div class="input-group">
+            <input type="password" id="password" placeholder="Senha">
+        </div>
+        <button onclick="return verificarLogin()">Entrar</button>
+        <p id="error-message" class="error-message">Usuário ou senha incorretos!</p>
+    </div>
+    <div class="signature">by DED BILU</div>
+
+    <script>
+        function verificarLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorMessage = document.getElementById('error-message');
+            const overlay = document.getElementById('modalOverlay');
+
+            if (password === 'letonio123' && 
+                (username === 'imold' || 
+                 username === 'sakai' || 
+                 username === 'osint' || 
+                 username === 'clonus')) {
+                overlay.style.display = 'block';
+                setTimeout(() => {
+                    sessionStorage.setItem('loggedIn', 'true');
+                    sessionStorage.setItem('username', username);
+                    window.location.href = 'pages/dashboard.html';
+                }, 500);
+                return false;
+            } else {
+                errorMessage.style.display = 'block';
+                return false;
+            }
+        }
+
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                verificarLogin();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,262 @@
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+/* Estilos Gerais */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Share Tech Mono', monospace;
+    color: white;
+    background: 
+        linear-gradient(rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.85)),
+        url('https://media.discordapp.net/attachments/1333152788548554845/1339383325567094814/474869227_2097244450714182_6027656965550689221_n.jpg?ex=67af2e2d&is=67addcad&hm=76401e99398c1045db94fcaa9f0ee783708945b44a9b3346dedab388902ce9c9&=&format=webp&width=415&height=415');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Título THE OLD com imagem */
+.header-title {
+    position: fixed;
+    top: 20px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    z-index: 100;
+    background: linear-gradient(rgba(0, 0, 0, 0.85), transparent);
+    padding: 20px;
+}
+
+.header-title::before {
+    content: '';
+    width: 70px;
+    height: 70px;
+    background-image: url('https://media.discordapp.net/attachments/1333152788548554845/1339383325567094814/474869227_2097244450714182_6027656965550689221_n.jpg?ex=67af2e2d&is=67addcad&hm=76401e99398c1045db94fcaa9f0ee783708945b44a9b3346dedab388902ce9c9&=&format=webp&width=415&height=415');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    border-radius: 50%;
+    opacity: 0.8;
+}
+
+.header-title::after {
+    content: 'THE OLD';
+    font-size: 60px;
+    font-weight: bold;
+    color: #ff3366;
+    letter-spacing: 12px;
+    text-transform: uppercase;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    position: relative;
+}
+
+/* Animação Profissional */
+@keyframes professionalGlow {
+    0% {
+        text-shadow: 
+            2px 2px 4px rgba(0, 0, 0, 0.3),
+            0 0 20px rgba(255, 51, 102, 0);
+    }
+    50% {
+        text-shadow: 
+            2px 2px 4px rgba(0, 0, 0, 0.3),
+            0 0 30px rgba(255, 51, 102, 0.5);
+        transform: translateY(-2px);
+    }
+    100% {
+        text-shadow: 
+            2px 2px 4px rgba(0, 0, 0, 0.3),
+            0 0 20px rgba(255, 51, 102, 0);
+    }
+}
+
+/* Container de Login */
+.login-container {
+    width: 90%;
+    max-width: 400px;
+    background-color: rgba(26, 26, 26, 0.95);
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 0 30px rgba(255, 51, 102, 0.2);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 51, 102, 0.2);
+    animation: slideIn 0.4s ease-out;
+    margin-top: 150px;
+    position: relative;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.login-container h2 {
+    text-align: center;
+    font-size: 32px;
+    margin-bottom: 20px;
+    letter-spacing: 4px;
+    text-shadow: 0 0 10px rgba(255, 51, 102, 0.5);
+    color: #ff3366;
+}
+
+/* Texto de Aviso */
+.warning-text {
+    text-align: center;
+    margin: 15px 0 25px 0;
+    padding: 15px;
+    border: 1px solid rgba(255, 51, 102, 0.3);
+    border-radius: 8px;
+    background-color: rgba(255, 51, 102, 0.1);
+}
+
+.warning-text p {
+    margin: 8px 0;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.8);
+    letter-spacing: 1px;
+}
+
+.warning-text .alert {
+    font-size: 16px;
+    color: #ff3366;
+    margin: 15px 0;
+}
+
+/* Grupos de Input */
+.input-group {
+    margin-bottom: 20px;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 51, 102, 0.2);
+    border-radius: 5px;
+    color: white;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.input-group input:focus {
+    outline: none;
+    border-color: #ff3366;
+    box-shadow: 0 0 10px rgba(255, 51, 102, 0.2);
+}
+
+/* Botão */
+.login-container button {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(45deg, #ff3366, #ff0044);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 16px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+}
+
+.login-container button:hover {
+    background: linear-gradient(45deg, #ff0044, #ff3366);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255, 51, 102, 0.3);
+}
+
+/* Mensagem de Erro */
+.error-message {
+    display: none;
+    color: #ff3366;
+    text-align: center;
+    margin-top: 10px;
+    padding: 10px;
+    background: rgba(255, 51, 102, 0.1);
+    border-radius: 5px;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Assinatura */
+.signature {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 14px;
+    letter-spacing: 2px;
+    text-align: center;
+}
+
+/* Animações */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsividade */
+@media (max-width: 480px) {
+    .header-title::before {
+        width: 50px;
+        height: 50px;
+    }
+
+    .header-title::after {
+        font-size: 40px;
+        letter-spacing: 8px;
+    }
+
+    .login-container {
+        width: 85%;
+        padding: 20px;
+        margin-top: 120px;
+    }
+}
+
+/* Efeito de Overlay e Modal */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    z-index: 1000;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.modal-container {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 400px;
+    background-color: rgba(26, 26, 26, 0.95);
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 0 30px rgba(255, 51, 102, 0.2);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 51, 102, 0.2);
+    z-index: 1001;
+    animation: slideIn 0.4s ease-out;
+} 
